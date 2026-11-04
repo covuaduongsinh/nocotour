@@ -1,0 +1,197 @@
+import { Building2, Handshake, Link2, Radar, Users } from 'lucide-react';
+import { useState, type ReactElement } from 'react';
+import {
+  toText,
+  useCrmText,
+  useMetadata,
+  type CrmRecord,
+  type Data,
+  type Entity,
+} from './api.js';
+import { recordTitle } from './lookups.js';
+import { useDebounced, useMatches } from './record-search.js';
+import { TaskSearchChip, type SearchOption } from './task-quick.js';
+
+// A new task's chips that search (RecordForm's quick mode): the record it
+// concerns, one lead, company or opportunity found by one search across the
+// three, as Clarify's record chip does; and the colleagues taking part.
+
+// The colleagues listed before a name is typed.
+const PEOPLE = 8;
+
+const arrayOf = (value: unknown): string[] =>
+  Array.isArray(value) ? value.map(toText) : [];
+
+export function TaskLinkChips({
+  input,
+  onChange,
+  names,
+}: {
+  input: Data;
+  onChange: (changes: Data) => void;
+  // The names the form already knows (records it opened with or picked).
+  names: Record<string, string>;
+}): ReactElement | null {
+  const { text, language } = useCrmText();
+  const { data: meta } = useMetadata();
+  const [recordSearch, setRecordSearch] = useState('');
+  const [peopleSearch, setPeopleSearch] = useState('');
+  // What was picked here, by id, so a chip names it at once.
+  const [known, setKnown] = useState<Record<string, string>>({});
+  const recordQuery = useDebounced(recordSearch);
+  // Fetched once the record chip is opened, not with the dialog.
+  const [looking, setLooking] = useState(false);
+  const leadMatches = useMatches('leads', recordQuery, looking, {
+    excludeStatus: 'converted',
+  });
+  const companyMatches = useMatches('companies', recordQuery, looking);
+  const dealMatches = useMatches('opportunities', recordQuery, looking);
+  const leads = leadMatches.rows;
+  const companies = companyMatches.rows;
+  const opportunities = dealMatches.rows;
+  const listTitles = {
+    ...leadMatches.titles,
+    ...companyMatches.titles,
+    ...dealMatches.titles,
+  };
+  if (!meta) return null;
+  const nameOf = (id: unknown): string => {
+    const key = toText(id ?? '');
+    return key ? (known[key] ?? names[key] ?? listTitles[key] ?? '') : '';
+  };
+  const listed = (items: string[]): string =>
+    items.join(language.startsWith('zh') ? '、' : ', ');
+  const options = (entity: Entity, records: CrmRecord[]): SearchOption[] =>
+    records.map((record) => ({
+      id: toText(record.id),
+      label: recordTitle(entity, record, { ...listTitles, ...names }),
+    }));
+  const remember = (option: SearchOption): void =>
+    setKnown((current) => ({ ...current, [option.id]: option.label }));
+  // One record: a lead, a company, or a deal (which carries its company),
+  // shown with its kind's menu icon.
+  const linked = nameOf(
+    input.opportunityId || input.leadId || input.companyId || '',
+  );
+  const LinkedIcon = input.opportunityId
+    ? Handshake
+    : input.leadId
+      ? Radar
+      : input.companyId
+        ? Building2
+        : Link2;
+  const colleagues = arrayOf(input.internalParticipants);
+  const team = meta.users.filter(
+    (u) =>
+      !u.disabled &&
+      u.roles.length &&
+      (!peopleSearch.trim() ||
+        u.name.toLowerCase().includes(peopleSearch.trim().toLowerCase())),
+  );
+  const toggle = (list: string[], id: string): string[] =>
+    list.includes(id) ? list.filter((v) => v !== id) : [...list, id];
+  return (
+    <>
+      <TaskSearchChip
+        icon={<LinkedIcon />}
+        label={linked || text('taskQuick.record')}
+        empty={!linked}
+        placeholder={toText(text('taskQuick.searchRecords'))}
+        groups={[
+          {
+            key: 'leads',
+            title: toText(text('entities.leads')),
+            options: options('leads', leads),
+          },
+          {
+            key: 'companies',
+            title: toText(text('entities.companies')),
+            options: options('companies', companies),
+          },
+          {
+            key: 'opportunities',
+            title: toText(text('entities.opportunities')),
+            options: options('opportunities', opportunities),
+          },
+        ]}
+        selected={
+          new Set(
+            [input.leadId, input.companyId, input.opportunityId]
+              .map((v) => toText(v ?? ''))
+              .filter(Boolean),
+          )
+        }
+        onSearch={setRecordSearch}
+        onOpenChange={(open) => {
+          if (open) setLooking(true);
+        }}
+        clearLabel={toText(text('taskQuick.clear'))}
+        onClear={() =>
+          onChange({
+            leadId: null,
+            companyId: null,
+            opportunityId: null,
+          })
+        }
+        onPick={(group, option) => {
+          remember(option);
+          const key =
+            group === 'leads'
+              ? 'leadId'
+              : group === 'companies'
+                ? 'companyId'
+                : 'opportunityId';
+          // One record: picking the one linked takes it out.
+          if (toText(input[key] ?? '') === option.id)
+            return onChange({
+              leadId: null,
+              companyId: null,
+              opportunityId: null,
+            });
+          // A deal carries its company, so the task shows on the company too.
+          const deal = opportunities.find((r) => toText(r.id) === option.id);
+          const company =
+            key === 'companyId'
+              ? option.id
+              : key === 'opportunityId'
+                ? toText(deal?.companyId ?? '') || null
+                : null;
+          onChange({
+            leadId: key === 'leadId' ? option.id : null,
+            companyId: company,
+            opportunityId: key === 'opportunityId' ? option.id : null,
+          });
+        }}
+      />
+      <TaskSearchChip
+        icon={<Users />}
+        label={
+          colleagues.length
+            ? listed(
+                colleagues.map(
+                  (id) => meta.users.find((u) => u.id === id)?.name ?? '',
+                ),
+              )
+            : text('fields.internalParticipants')
+        }
+        empty={!colleagues.length}
+        multiple
+        placeholder={toText(text('taskQuick.searchPeople'))}
+        groups={[
+          {
+            key: 'users',
+            options: team.map((u) => ({ id: u.id, label: u.name })),
+          },
+        ]}
+        selected={new Set(colleagues)}
+        onSearch={setPeopleSearch}
+        limit={PEOPLE}
+        clearLabel={toText(text('taskQuick.clear'))}
+        onClear={() => onChange({ internalParticipants: [] })}
+        onPick={(_group, option) =>
+          onChange({ internalParticipants: toggle(colleagues, option.id) })
+        }
+      />
+    </>
+  );
+}

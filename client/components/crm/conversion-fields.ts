@@ -1,0 +1,65 @@
+import type { CrmRecord, Data } from './api.js';
+
+// What conversion copies from the lead into each record. The server holds the
+// same lists; these drive the preview and the conflict check only.
+export const inherited = {
+  companies: [
+    'name',
+    'website',
+    'industry',
+    'employees',
+    'annualRevenue',
+    'currency',
+    'country',
+    'state',
+    'city',
+    'address',
+    'description',
+    'source',
+    'ownerId',
+  ],
+  contacts: [
+    'name',
+    'gender',
+    'phone',
+    'email',
+    'linkedin',
+    'jobTitle',
+    'source',
+    'ownerId',
+  ],
+} as const;
+
+export function proposalFor(
+  lead: CrmRecord,
+  entity: 'companies' | 'contacts',
+): Data {
+  return entity === 'companies'
+    ? {
+        name: lead.company,
+        website: lead.website,
+        industry: lead.industry,
+        employees: lead.employees,
+        annualRevenue: lead.annualRevenue,
+        currency: lead.currency,
+        country: lead.country,
+        state: lead.state,
+        city: lead.city,
+        address: lead.address,
+        description: lead.companyDescription,
+        source: lead.source,
+        ownerId: lead.ownerId,
+        status: 'qualified',
+      }
+    : {
+        name: lead.name,
+        // A new contact without the lead's starts as unknown.
+        gender: lead.gender ?? 'unknown',
+        phone: lead.phone,
+        email: lead.email,
+        linkedin: lead.linkedin,
+        jobTitle: lead.jobTitle,
+        source: lead.source,
+        ownerId: lead.ownerId,
+      };
+}

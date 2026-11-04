@@ -1,0 +1,246 @@
+import { toText } from './schema.js';
+import { jsonValue } from './values.js';
+import type { Row } from '@nocobase/db';
+import type { LeadResearch, ResearchMiss } from './lead-research.js';
+
+// The AI's own entries in a record's activity feed (crmHistory, action
+// `ai`): what it concluded and where that stands. Read by the feed and by
+// the evaluator (lead-evaluation.ts), kept apart so neither imports the
+// other.
+
+export const EVALUATION = 'evaluation';
+// A run started this long ago and still going is taken to have died with
+// the process that ran it; one still waiting its turn (no `startedAt`), after
+// a day, its task lost (a process killed without shutting down).
+const STALE_AFTER_MS = 10 * 60 * 1000;
+const QUEUED_STALE_AFTER_MS = 24 * 60 * 60 * 1000;
+
+// A lead's follow-up recommendation (lead-evaluation.ts): keep following it
+// up, nurture it, convert it or set it aside as invalid, with the grade,
+// the reasons and what to do next.
+export interface Verdict {
+  recommendation: 'follow' | 'nurture' | 'convert' | 'invalid';
+  grade: 'A' | 'B' | 'C' | null;
+  summary: string;
+  // What it found, as a short paragraph; absent from entries before it.
+  brief?: string | null;
+  reasons: string[];
+  edition: string | null;
+  invalidReason: string | null;
+  // Following up: the next thing to do, when, what to prepare and ask.
+  // `taskId`: a task already planned that the step carries on
+  // (prepared for, moved, or asked about when overdue) instead of a new one.
+  nextStep: {
+    type: string;
+    subject: string;
+    inDays: number;
+    taskId?: string | null;
+    // Its owner, when the AI named one (else the record's owner).
+    ownerId?: string | null;
+  } | null;
+  prep?: string[];
+  questions: string[];
+  // Converting: the opportunity to open.
+  // Its currency, when the AI named one; else the CRM's default.
+  opportunity?: {
+    name: string;
+    amount: number | null;
+    currency?: string | null;
+  } | null;
+  // Nurturing: when to look at it again.
+  reviewInDays?: number | null;
+  // What changed since the previous recommendation, when there was one.
+  changes?: string[];
+  // Following up by email: the draft, never sent by the CRM.
+  email?: { subject: string; body: string } | null;
+  // Particulars found on the web, offered to fill the lead.
+  enrich?: Enrichment[];
+}
+
+// An opportunity's follow-up recommendation (opportunity-evaluation.ts):
+// move it to another stage, keep at it where it is, pause it or lose it,
+// with how likely it is to close, the reasons, the risks and what to do
+// next.
+export interface OpportunityVerdict {
+  recommendation: 'advance' | 'continue' | 'pause' | 'lose';
+  confidence: 'high' | 'medium' | 'low' | null;
+  // Advancing (or going back): the stage the evidence supports.
+  stage: string | null;
+  summary: string;
+  // What it found, as a short paragraph; absent from entries before it.
+  brief?: string | null;
+  reasons: string[];
+  risks: string[];
+  nextStep: Verdict['nextStep'];
+  prep: string[];
+  questions: string[];
+  email: { subject: string; body: string } | null;
+  // The deal's fields to fill or correct (amount, currency, expected close
+  // date, business type, source, description), with why, and what the deal
+  // holds now (null when empty).
+  updates: OpportunityUpdate[];
+  pauseReason: string | null;
+  resumeInDays: number | null;
+  lostReason: string | null;
+  // Lost: when to look in on the customer again, if worth it.
+  revisitInDays: number | null;
+  changes: string[];
+  // What the web says about the deal's company, for its fields, when the
+  // follow-up looked the company up (opportunity-evaluation.ts).
+  enrich?: Enrichment[];
+  // The approvals to request before the customer is promised what needs
+  // them (a discount over 10%, longer payment terms, changed contract
+  // terms, a committed delivery date), submitted with the accept.
+  approvals?: ProposedApproval[];
+  // Every commercial term in the material, checked by the code against
+  // the deal's approvals (opportunity-evaluation.ts, checkTerms).
+  terms?: CheckedTerm[];
+  // The customer's people the material shows a part for, matched to the
+  // company's contacts: a role to set or change on the deal, a contact to
+  // add to it, or a person to create as the company's contact and add.
+  contacts?: ProposedContact[];
+}
+
+export interface ProposedContact {
+  name: string;
+  role: string;
+  // The company's contact they are; null for one to create.
+  contactId: string | null;
+  // The contact's name when it differs from how the material writes it.
+  contactName?: string;
+  // Their role on the deal now; null when they are not on it.
+  currentRole: string | null;
+  jobTitle: string | null;
+  phone: string | null;
+  email: string | null;
+  reason: string;
+}
+
+export interface CheckedTerm {
+  topic: string;
+  // The term as agreed or asked, e.g. "balance 60 days after acceptance".
+  term: string;
+  // standard: within the standards; approved or pending: an approval of
+  // the deal covers it; rejected: the approval asked for it was rejected;
+  // needed: beyond them, never asked for.
+  status: 'standard' | 'approved' | 'pending' | 'rejected' | 'needed';
+  // The approval's name, for approved, pending and rejected.
+  approval?: string;
+}
+
+export interface ProposedApproval {
+  topic: string;
+  name: string;
+  description: string;
+}
+
+export interface OpportunityUpdate {
+  field:
+    | 'amount'
+    | 'currency'
+    | 'expectedCloseAt'
+    | 'businessType'
+    | 'source'
+    | 'description';
+  value: string;
+  reason: string;
+  current: string | null;
+}
+
+// A value found on the web for one of the lead's fields, with its source and
+// what the lead holds now (null when empty).
+export interface Enrichment {
+  field: string;
+  value: string;
+  // The page it was found on, for the web.
+  source: string | null;
+  // The CRM's own material it came from (a task's name, a comment, the
+  // original message), when not the web.
+  basis?: string;
+  current: string | null;
+}
+
+export interface EvaluationEntry<V = Verdict> {
+  id: string;
+  recordId: string;
+  // `superseded`: a newer evaluation of the same record replaced it.
+  status:
+    'running' | 'pending' | 'accepted' | 'dismissed' | 'failed' | 'superseded';
+  createdAt: string;
+  ai: {
+    kind: typeof EVALUATION;
+    result?: V;
+    error?: string;
+    sessionId?: string;
+    decidedById?: string;
+    decidedAt?: string;
+    taskId?: string;
+    // When this run looked the company up on the web; a run that did not
+    // (recently checked, see lead-evaluation.ts) leaves it out, or carries
+    // the date of the look-up whose findings it still offers.
+    researchedAt?: string;
+    // A lead's: what this run's look-up found, with its pages
+    // (lead-research.ts); a revision keeps the card's it redoes.
+    research?: LeadResearch;
+    // A lead's: why a look-up due this time was not made.
+    researchMiss?: ResearchMiss;
+    // A card redone as a person asked: the card it replaced, what they
+    // asked and who.
+    revises?: string;
+    instruction?: string;
+    instructedById?: string;
+    // The web findings the person chose to write into the lead.
+    enrichedFields?: string[];
+    // A deal's: the approvals its accept submitted, each by its place in
+    // the card's list.
+    submittedApprovals?: { index: number; id: string }[];
+    // An approval's review (approval-review.ts): what its approver decided
+    // from the card, and the comment sent with the decision.
+    decision?: 'approve' | 'reject';
+    comment?: string;
+    enrichedById?: string;
+    enrichedAt?: string;
+    // The deal's fields the person kept with an accept (an opportunity's
+    // amount or expected close date).
+    updatedFields?: string[];
+    // The proposed contacts the person kept, by their place in the card's
+    // list, each with the contact it set on the deal.
+    keptContacts?: { index: number; contactId: string }[];
+    // What started a follow-up the system ran on its own (a signal, a
+    // changed company, a task marked done); absent when asked for.
+    trigger?: string;
+    // When a running card's run began; absent while it waits its turn.
+    startedAt?: string;
+    // An approval's review voided because the approval left the queue
+    // without it: what became of the approval, by whom and when.
+    approvalOutcome?: 'withdrawn' | 'approved' | 'rejected';
+    retiredAt?: string;
+    retiredById?: string;
+    // A deal's follow-up started by its approvals' decisions: the approvals
+    // submitted together and what became of each.
+    decidedApprovals?: {
+      id: string;
+      name: string;
+      status: string;
+    }[];
+  };
+}
+
+export function readEntry<V = Verdict>(row: Row): EvaluationEntry<V> {
+  const ai = (jsonValue(row.ai) ?? {}) as EvaluationEntry<V>['ai'];
+  let status = toText(row.aiStatus) as EvaluationEntry['status'];
+  if (
+    status === 'running' &&
+    (ai.startedAt
+      ? Date.now() - Date.parse(ai.startedAt) > STALE_AFTER_MS
+      : Date.now() - Date.parse(toText(row.createdAt)) > QUEUED_STALE_AFTER_MS)
+  )
+    status = 'failed';
+  return {
+    id: toText(row.id),
+    recordId: toText(row.recordId),
+    status,
+    createdAt: toText(row.createdAt),
+    ai,
+  };
+}

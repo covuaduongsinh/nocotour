@@ -1,0 +1,49 @@
+# Application shell
+
+Read this before changing the layouts, header, sidebar, breadcrumbs, account menu or loading indicators under `client/layouts/`, `client/routing/` and `client/components/`.
+
+## Breadcrumbs and layouts
+
+Layouts own breadcrumb route context and render the current page's trail in the header after the sidebar toggle (`client/components/breadcrumbs.tsx`): the route trail by default, or the trail a page declares with `usePageBreadcrumb` from `@nocobase/app-client` when it names records. Pages do not render breadcrumbs themselves. `AppRouter` selects routes and layouts. See [pages and routes](../skills/nocobase-app-development/references/frontend/references/page.md) for each layout's scope.
+
+## Header and sidebar
+
+The route-tree provider remembers each visited ancestor's query while its descendants are open. Default breadcrumbs and back links restore that query, including an empty one, instead of applying detail-only parameters to the list. Keep this provider mounted above page navigation. Explicit breadcrumb/back destinations remain application-owned. See the linked pages-and-routes reference for deep-link and reload fallbacks.
+
+`client/layouts/components/layout-header.tsx` is a presentation container accepting children. The sidebar is shadcn's Sidebar: `components/app-sidebar.tsx` wraps its provider, desktop icon mode and phone sheet, and `components/navigation-menu.tsx` draws the permission-filtered route tree with `SidebarMenu*` and controlled `Collapsible` sub-menus. Its first-level rows are `h-8.5` (`ROW`, 30.6px on the compact theme, where the primitive's buttons are `h-8`; the collapsed icon mode keeps its square) and stand `gap-0.5` apart (`MENU_ROWS`, where the primitive sets them flush), their count badges centred on the taller row (`BADGE_TOP`); all application changes passed as classes rather than edited into the primitive.
+
+`client/lib/navigation-transform.ts` is the application-owned hook for customizing the permission-filtered navigation tree (`transformNavigation`, applied by `buildRouteNavigation` in `client/routing/route-navigation.ts`, template 1.0.0-beta.68); the CRM changes nothing there yet. A navigation item may be marked `section`; the CRM's menu draws its top-level groups as sections itself (`NavigationMenu`'s `sections`) and does not read that flag. Keep `client/components/ui/sidebar.tsx` as the shadcn CLI writes it except for removing its unused origin-wide `sidebar_state` cookie write; persistence belongs to the application-scoped preference. Customize from outside: widths go through the provider's `style` in spacing units, the phone sheet is rendered in `app-sidebar.tsx` with a translated title, and the provider's Ctrl/Cmd+B shortcut is stopped at `document`. The App layout owns menus, branding, permissions and redirects. Desktop icon mode shows leaf labels as zero-delay tooltips and opens groups in hover and keyboard-focus popovers, preserving filtered navigation, parent-page links, nested groups and the selected group's highlight. Keep this behavior aligned across layouts. Desktop collapse state is shared through `useSidebarPreference` at `nocobase:sidebar:collapsed:app:<basename>` across layouts and tabs of the same application. `createApp(runtime)` provides a stable store using `runtime.basename`, with only empty/root and boundary slashes normalized; paths and case remain intact. Missing new keys default to expanded without migrating the old shared preference; whether the phone sheet is open stays local to each layout.
+
+The brand (`client/layouts/components/app-brand.tsx`, an application change) is the official NocoBase lockup with the product's name, `NocoCrmLogo` in `client/components/brand-logo.tsx`: the mark and "Noco" are the official vectors unchanged, and "CRM" is the small-size version from NocoSolution's logo script (`tools/logo/logo.py CRM --small`, which the private NocoSolution repository holds): Chivo Thin, the typeface of the light "Base", spaced as "Base" is, with strokes a little heavier than the official hairline, since the hairline is under a pixel wide at the header's 18px and breaks up; documents and slides use the script's standard version, as heavy as "Base". Regenerate the paths with the script rather than editing them. It fills with the current colour, so one drawing serves light and dark, and the collapsed sidebar shows the mark alone (`brand-mark-geometry.ts`). The header below `md` shows the lockup and no page trail, a size smaller on a phone (`AppBrand small`: `h-4` below `sm`, `h-5` above, as NocoITAM's header has it), 6px from the sidebar's toggle on a phone (`gap-1.5`, `sm:gap-3` above); where even the lockup is wider than the room left beside the Demo Mode entry in a long language, it draws smaller still, keeping its height (`max-w-full min-w-0`, the header's `gap-2` keeping it off the entry). It showed the mark alone until 2026-11-03, when the header's appearance button moved into the account menu. The sign-in pages pass the same lockup as the split layout's `name`, with no boxed mark.
+
+The header carries no Settings or Inbox entry. An application has no separate settings area: a page that configures something is an ordinary route in `client/routes.ts` with `navigation`, placed in the sidebar like any other page, for example under a Settings navigation group. The `/inbox` page declares no navigation; give it an entry where the application wants one.
+
+Navigation groups retain their expanded or collapsed state while the navigation tree stays mounted. Selecting a new page expands its ancestor groups without collapsing other groups; users can still collapse the active group manually.
+
+## Account menu and session
+
+The account menu checks Better Auth sign-out results before refreshing the session and shows a localized error toast for API or network failures. Preserve this behavior when upgrading the shell; navigation alone does not revoke a session.
+
+The authorization provider clears the permission snapshot before rendering a new session. Route navigation and page guards subscribe to the authorization revision; preserve these checks when customizing the shell so account changes and permission updates take effect without a reload. Pending checks hide protected content, and failed checks deny access.
+
+The colour mode and theme are an Appearance submenu under the language in the account menu (`client/layouts/components/appearance-menu.tsx`, radio items, a choice keeping the menu open), in place of the template's palette button in the header since 2026-11-03; the template's panel (`client/theme/theme-settings.tsx`) stays for the pages outside the shell (`standalone-page-layout.tsx`). The account menu language control in `client/layouts/components/language-switcher.tsx` uses a shadcn submenu with radio items. Render it inside `DropdownMenuContent` to preserve menu keyboard navigation and selection semantics. It names `zh-CN` and `zh-TW` by their scripts (`SCRIPT_TAGS`, `zh-Hans` and `zh-Hant` through `Intl.DisplayNames`: Simplified and Traditional Chinese, each in itself) instead of the framework's labels, which tell two locales sharing a language apart by region, names Indonesian Bahasa Indonesia (`OWN_NAMES`) rather than the framework's Indonesia, and starts every name with a capital (Español, Français) as a menu item does; an application change to keep on upgrade.
+
+## Branded loading
+
+Use `Loading` for page or panel waits and `Spinner` (the shadcn-compatible adapter to `BrandSpinner`) for inline pending actions, uploads, and refresh indicators. Both share the stable NocoBase mark and orbit animation; do not introduce independent Lucide spinners for application loading. Keep skeletons for content placeholders and progress bars for determinate progress. `index.html` has the matching pre-JavaScript mark and must stay visually consistent. All animations respect reduced motion.
+
+The CRM's own changes to the sidebar, the header and the layouts are described in [the CRM overview](crm-overview.md) and [the CRM's look](crm-look.md).
+
+The shared list of shell behaviors to keep when customizing is in [customizing the shell](../skills/nocobase-app-development/references/frontend/references/shell.md).
+
+The signed-in region waits in `client/routing/session-preparation.tsx` before mounting `AppLayout`: the authentication provider first reconnects active realtime subscriptions as the current session and waits for the open notification, including permission invalidation. A ten-second timeout shows a localized retry/sign-out screen. Keep this boundary inside `RequiredAuthentication`; guest login must remain reachable without realtime. Readiness is only for initial session preparation. Subsequent permission notifications and reconnects still use normal fail-closed route unmounting, including portal and effect cleanup.
+
+The header actions mount `DemoModeMenu` from
+`@nocobase/app-plugin-demo-mode/client/menu` before the assistant and account
+controls. Keep the Client registration as `demoMode()`. The plugin owns
+the demo notice, account loading, switching and translated copy, and renders
+nothing outside Demo Mode. The avatar menu has no second account switcher.
+
+## List context
+
+Keep the identity-keyed `SessionPreparation` boundary: mounted private list conditions and ancestor query memory must be discarded when the signed-in user changes. Public list state uses `useTableUrlState`; tabbed datasets use `useListTabs`, with complete owned parameter keys and permission-filtered tabs. Follow the synchronized [list navigation rules](../skills/nocobase-app-development/references/frontend/references/child-routes.md#list-tab-breadcrumbs-and-private-conditions). Default back links use an empty ancestor query when no source visit exists; explicit return destinations remain application-owned.

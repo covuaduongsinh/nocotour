@@ -1,0 +1,51 @@
+node_modules/
+dist/
+coverage/
+.DS_Store
+
+# Local configuration, including the generated AUTH_SECRET.
+/config.yml
+
+# Local environment secrets.
+.env
+.env.*
+!.env.example
+
+# Local application state.
+/storage/*
+# Skills synchronized by `pnpm nocobase skills sync`; `.agents/rules/` is the application's own guidance and is committed.
+/.agents/*
+!/.agents/rules/
+/.agent-annotations/
+/.nocobase/
+*.log
+
+# Personal editor/agent settings.
+/.claude/settings.local.json
+
+# SQLite databases anywhere (the application state lives under storage/).
+*.sqlite
+*.sqlite-journal
+
+# pnpm's local content store.
+/.pnpm-store
+
+# Generated mirror of .agents/skills for Claude Code (skills:sync).
+/.claude/skills/
+
+# Written by `pnpm nocobase db apply` and `pnpm dev` after migrating; derived, never read back.
+database/*/collections/
+
+# NocoSolution (private, optional): cloned here by the start-of-work command in AGENTS.md.
+/nocosolution/
+
+# Local preview servers for the Claude desktop app, each developer's own.
+/.claude/launch.json
+
+# Local research reports, kept beside the checkout and never committed.
+/reports/
+/research_notes/
+
+nocoedu_*.tar.gz
+
+*.tar.gz

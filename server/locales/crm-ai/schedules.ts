@@ -1,0 +1,67 @@
+import type { Pair } from './index.js';
+
+// The CRM's daily checks as the scheduled tasks page shows them: the
+// target's label and description, and the schedule's title and
+// description (CrmProvider), in the CRM's working language.
+export const scheduleTexts = {
+  leadTarget: ['线索巡检', 'Lead signal check'],
+  leadTargetDescription: [
+    'AI 跟进长时间未联系、没有动静或培育复查到期的线索',
+    'The AI follows up leads left uncontacted, gone quiet or due for a nurture review',
+  ],
+  leadTitle: ['线索每日巡检', 'Daily lead check'],
+  leadDescription: [
+    '每天检查进行中的线索：新线索太久没联系、跟进中太久没有联系、培育复查到期（天数见 CRM 设置的提醒）。AI 对每条跟进一次，结果进线索负责人的「待我处理」。',
+    "Every day, the open leads are checked: a new lead left uncontacted, a working one gone quiet, a nurtured one due for review (the days are the CRM settings' reminders). The AI follows each up once, and the result waits on its owner.",
+  ],
+  dealTarget: ['商机巡检', 'Opportunity signal check'],
+  dealTargetDescription: [
+    'AI 跟进没有动静、临近或超过预计成交日期、暂停到期的商机',
+    'The AI follows up opportunities gone quiet, near or past their expected close date, or due to resume',
+  ],
+  dealTitle: ['商机每日巡检', 'Daily opportunity check'],
+  dealDescription: [
+    '每天检查进行中的商机：太久没有联系、预计成交日期临近或已过、暂停到了预计恢复日期（天数见 CRM 设置的提醒）。AI 对每个跟进一次，结果进商机负责人的「待我处理」。',
+    "Every day, the open opportunities are checked: one gone quiet, one whose expected close date is near or past, a paused one due to resume (the days are the CRM settings' reminders). The AI follows each up once, and the result waits on its owner.",
+  ],
+  fileTarget: ['附件清理', 'Attachment cleanup'],
+  fileTargetDescription: [
+    '删除不再被任何记录或评论使用的附件',
+    'Deletes the attachments no record or comment uses any more',
+  ],
+  fileTitle: ['附件每日清理', 'Daily attachment cleanup'],
+  fileDescription: [
+    '每天检查附件：不在任何记录的附件里、也不在任何评论里的文件，第一次发现后再过 7 天、且上传满 7 天，从系统中删除（包括存储的文件）。期间重新被使用的文件会保留。',
+    'Every day, the attachments are checked: a file no record lists among its attachments and no comment carries is deleted from the system, its stored file included, 7 days after it was first found unused and once it is 7 days old. One used again meanwhile is kept.',
+  ],
+  searchTarget: ['搜索问答清理', 'Search answer cleanup'],
+  searchTargetDescription: [
+    '删除在全局搜索里问 AI、没有继续追问而遗留的对话',
+    'Deletes the conversations asked from the global search that nobody went on with and were left behind',
+  ],
+  searchTitle: ['搜索问答每日清理', 'Daily search answer cleanup'],
+  searchDescription: [
+    '在全局搜索里问 AI 的回答只在搜索弹窗里显示，离开时即删除，继续追问才保留为对话。每天删除其中因关闭窗口等原因遗留、超过 1 小时的对话。',
+    'An answer asked from the global search shows only in the search dialog and is deleted when it is left, kept as a conversation only when the person goes on asking. Every day, those left behind (a window closed on one) an hour or more are deleted.',
+  ],
+  taskTarget: ['任务准备', 'Task preparation'],
+  taskTargetDescription: [
+    'AI 为当天有具体时间的任务做准备',
+    "The AI prepares the day's timed tasks",
+  ],
+  taskTitle: ['任务每日准备', 'Daily task preparation'],
+  taskDescription: [
+    '每天早上为当天还没开始、有具体时间、关联了线索、商机或公司的任务做一次准备：目标、进展、对方的人、近况、要问的问题、要带的材料、风险和要点。结果只有任务负责人和参与人能看到。',
+    "Every morning, each task still ahead today that has a time of day and concerns a lead, an opportunity or a company is prepared once: its aim, where things stand, the people on the other side, recent news, the questions to ask, what to bring, the risks and the points to cover. Only the task's owner and participants see it.",
+  ],
+  signalTarget: ['公司信号', 'Company signals'],
+  signalTargetDescription: [
+    'AI 联网查看重点客户的新动态：融资、扩张招聘、高管变动、重大业务动态、风险',
+    'The AI looks on the web for what happened to the companies you sell to: funding, hiring, executives, major business news and risks',
+  ],
+  signalTitle: ['公司信号每日检查', 'Daily company signal check'],
+  signalDescription: [
+    '每天早上联网检查有进行中商机或被标记关注的公司，每家每周最多一次，每次最多 20 家。发现的信号带出处记在公司上，并通知公司和商机的负责人。需要配置通义千问。',
+    "Every morning, the companies with an open deal or marked as watched are looked up on the web, each at most once a week and at most 20 a pass. Each signal found is kept on the company with its sources, and its owner and its open deals' owners are told. Needs the Qwen model service.",
+  ],
+} as const satisfies Record<string, Pair>;
