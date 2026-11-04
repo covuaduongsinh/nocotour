@@ -1,20 +1,41 @@
 import type { ReactElement } from 'react';
-import { useState } from 'react';
-import { Users, Plus, Award, Phone } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Users, Plus, Award, Phone, RefreshCw } from 'lucide-react';
 
 export default function TourPlayers(): ReactElement {
-  const [players] = useState([
-    { id: 'p-u9-01', seed: 1, name: 'Nguyễn Minh Khang', birth: 2017, gender: 'Nam', club: 'DSC Pháo Đài Láng', elo: 1250, phone: '0912345601', status: 'Đang đấu', fee: 'Đã nộp' },
-    { id: 'p-u9-02', seed: 2, name: 'Trần Gia Bảo', birth: 2017, gender: 'Nam', club: 'DSC Kim Liên', elo: 1210, phone: '0912345602', status: 'Đang đấu', fee: 'Đã nộp' },
-    { id: 'p-u9-03', seed: 3, name: 'Lê Bảo Châu', birth: 2018, gender: 'Nữ', club: 'DSC Pháo Đài Láng', elo: 1180, phone: '0912345603', status: 'Đang đấu', fee: 'Đã nộp' },
-    { id: 'p-u9-04', seed: 4, name: 'Phạm Nhật Nam', birth: 2017, gender: 'Nam', club: 'DSC Vĩnh Phúc', elo: 1150, phone: '0912345604', status: 'Đang đấu', fee: 'Đã nộp' },
-    { id: 'p-u9-05', seed: 5, name: 'Hoàng Tuấn Kiệt', birth: 2018, gender: 'Nam', club: 'CLB Cờ Vua Hoàn Kiếm', elo: 1120, phone: '0912345605', status: 'Đang đấu', fee: 'Đã nộp' },
-    { id: 'p-u9-06', seed: 6, name: 'Vũ Đức Trí', birth: 2017, gender: 'Nam', club: 'DSC Pháo Đài Láng', elo: 1100, phone: '0912345606', status: 'Đang đấu', fee: 'Đã nộp' },
-    { id: 'p-u9-07', seed: 7, name: 'Đặng Tuệ Mẫn', birth: 2018, gender: 'Nữ', club: 'DSC Kim Liên', elo: 1080, phone: '0912345607', status: 'Đang đấu', fee: 'Đã nộp' },
-    { id: 'p-u9-08', seed: 8, name: 'Bùi Hải Đăng', birth: 2017, gender: 'Nam', club: 'CLB Cờ Vua Cầu Giấy', elo: 1050, phone: '0912345608', status: 'Đang đấu', fee: 'Đã nộp' },
-    { id: 'p-u9-09', seed: 9, name: 'Đỗ Quỳnh Chi', birth: 2018, gender: 'Nữ', club: 'DSC Vĩnh Phúc', elo: 1020, phone: '0912345609', status: 'Đang đấu', fee: 'Đã nộp' },
-    { id: 'p-u9-10', seed: 10, name: 'Ngô Đức Thắng', birth: 2017, gender: 'Nam', club: 'DSC Pháo Đài Láng', elo: 1000, phone: '0912345610', status: 'Đang đấu', fee: 'Đã nộp' },
+  const [players, setPlayers] = useState<any[]>([
+    { id: 'p-u9-01', seedNumber: 1, fullName: 'Nguyễn Minh Khang', birthYear: 2017, gender: 'M', club: 'DSC Pháo Đài Láng', startingElo: 1250, phone: '0912345601', status: 'active', paidFee: 250000 },
+    { id: 'p-u9-02', seedNumber: 2, fullName: 'Trần Gia Bảo', birthYear: 2017, gender: 'M', club: 'DSC Kim Liên', startingElo: 1210, phone: '0912345602', status: 'active', paidFee: 250000 },
+    { id: 'p-u9-03', seedNumber: 3, fullName: 'Lê Bảo Châu', birthYear: 2018, gender: 'F', club: 'DSC Pháo Đài Láng', startingElo: 1180, phone: '0912345603', status: 'active', paidFee: 250000 },
+    { id: 'p-u9-04', seedNumber: 4, fullName: 'Phạm Nhật Nam', birthYear: 2017, gender: 'M', club: 'DSC Vĩnh Phúc', startingElo: 1150, phone: '0912345604', status: 'active', paidFee: 250000 },
+    { id: 'p-u9-05', seedNumber: 5, fullName: 'Hoàng Tuấn Kiệt', birthYear: 2018, gender: 'M', club: 'CLB Cờ Vua Hoàn Kiếm', startingElo: 1120, phone: '0912345605', status: 'active', paidFee: 250000 },
+    { id: 'p-u9-06', seedNumber: 6, fullName: 'Vũ Đức Trí', birthYear: 2017, gender: 'M', club: 'DSC Pháo Đài Láng', startingElo: 1100, phone: '0912345606', status: 'active', paidFee: 250000 },
+    { id: 'p-u9-07', seedNumber: 7, fullName: 'Đặng Tuệ Mẫn', birthYear: 2018, gender: 'F', club: 'DSC Kim Liên', startingElo: 1080, phone: '0912345607', status: 'active', paidFee: 250000 },
+    { id: 'p-u9-08', seedNumber: 8, fullName: 'Bùi Hải Đăng', birthYear: 2017, gender: 'M', club: 'CLB Cờ Vua Cầu Giấy', startingElo: 1050, phone: '0912345608', status: 'active', paidFee: 250000 },
+    { id: 'p-u9-09', seedNumber: 9, fullName: 'Đỗ Quỳnh Chi', birthYear: 2018, gender: 'F', club: 'DSC Vĩnh Phúc', startingElo: 1020, phone: '0912345609', status: 'active', paidFee: 250000 },
+    { id: 'p-u9-10', seedNumber: 10, fullName: 'Ngô Đức Thắng', birthYear: 2017, gender: 'M', club: 'DSC Pháo Đài Láng', startingElo: 1000, phone: '0912345610', status: 'active', paidFee: 250000 },
   ]);
+  const [loading, setLoading] = useState(false);
+
+  const apiBase = useMemo(() => {
+    if (typeof window !== 'undefined' && window.location.pathname.startsWith('/main')) {
+      return '/main/api/tour';
+    }
+    return '/api/tour';
+  }, []);
+
+  useEffect(() => {
+    setLoading(true);
+    fetch(`${apiBase}/players`)
+      .then((r) => r.json())
+      .then((res) => {
+        if (res.ok && Array.isArray(res.data) && res.data.length > 0) {
+          setPlayers(res.data);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [apiBase]);
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
@@ -49,30 +70,30 @@ export default function TourPlayers(): ReactElement {
               {players.map((p) => (
                 <tr key={p.id} className="hover:bg-muted/30 transition-colors">
                   <td className="p-4 text-center font-bold text-foreground bg-muted/20">
-                    {p.seed}
+                    {p.seedNumber || p.seed}
                   </td>
                   <td className="p-4 font-semibold text-foreground">
-                    {p.name}
+                    {p.fullName || p.name}
                   </td>
                   <td className="p-4 text-center text-muted-foreground">
-                    {p.birth}
+                    {p.birthYear || p.birth}
                   </td>
                   <td className="p-4 text-center text-muted-foreground">
-                    {p.gender}
+                    {p.gender === 'F' ? 'Nữ' : 'Nam'}
                   </td>
                   <td className="p-4 text-muted-foreground">
                     {p.club}
                   </td>
                   <td className="p-4 text-center font-bold text-purple-700 dark:text-purple-400">
-                    {p.elo}
+                    {p.startingElo || p.elo}
                   </td>
                   <td className="p-4 text-center">
                     <span className="text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-semibold">
-                      {p.fee}
+                      {p.paidFee > 0 ? 'Đã nộp' : 'Chưa nộp'}
                     </span>
                   </td>
                   <td className="p-4 text-center text-xs text-muted-foreground">
-                    {p.status}
+                    {p.status === 'active' ? 'Đang đấu' : p.status}
                   </td>
                 </tr>
               ))}
