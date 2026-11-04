@@ -114,22 +114,26 @@ Migration `database/main/migrations/202611040001_create_nocotour_core.ts`:
 2. Tạo Router `server/routes/tournament.ts` cung cấp đầy đủ API bốc thăm, ghi điểm, xuất file TRF và tra cứu bảng xếp hạng.
 3. Biên dịch TypeScript cho toàn bộ Server (`tsc -p tsconfig.server.json`).
 
-### Giai đoạn 4: Xây dựng Giao diện Client & Đóng gói Build
+### Giai đoạn 4: Xây dựng Giao diện Client & Đóng gói Build [ĐÃ HOÀN THÀNH 100%]
 1. Xây dựng các trang giao diện: `tour-dashboard.tsx`, `tour-tournaments.tsx`, `tour-pairings.tsx`, `tour-standings.tsx`, `tour-players.tsx`, `tour-elo-trf.tsx`.
 2. Thiết kế logo nhận diện `AppBrand` cho NocoTour.
-3. Biên dịch gói ứng dụng Client bằng Vite (`vite build`).
+3. Hoàn thiện Arbiter Desk (`tour-pairings.tsx`): Kết nối trực tiếp các nút bấm trọng tài `1-0`, `0-1`, `½-½`, `+-`, `-+`, `✕`, modal bốc thăm Thụy Sĩ FIDE Dutch, xem trước bảng xếp hạng song song (split-view), chế độ in biên bản bàn đấu, và nút hoàn tác hủy vòng (rollback).
+4. Biên dịch gói ứng dụng Client bằng Vite (`vite build`) thành công vào `dist/client/`.
 
-### Giai đoạn 5: Triển khai Lên VPS Production (`nocotour.dsc.edu.vn`)
-1. Đóng gói `nocotour_v1.tar.gz` và truyền lên VPS `/tmp/`.
-2. Tạo cấu trúc thư mục `/srv/nocotour-dsc/releases/v1/dist` và liên kết `node_modules` bằng hardlinks.
-3. Tạo file cấu hình `/srv/nocotour-dsc/config.yml` (SQLite `/app/storage/tour.sqlite`, Snowflake WorkerId: 4).
-4. Thiết lập `/srv/nocotour-dsc/docker-compose.yml` kết nối vào mạng `dokploy-network` với Traefik Host `nocotour.dsc.edu.vn`.
-5. Tạo manifest checksum cho migrations/seeds và khởi chạy container `nocotour-dsc-app`.
-6. Kiểm tra trực tiếp `curl -sI https://nocotour.dsc.edu.vn/main` (HTTP 200 OK).
+### Giai đoạn 5: Triển khai Lên VPS Production (`nocotour.dsc.edu.vn`) [ĐÃ HOÀN THÀNH 100%]
+1. Đóng gói `client_bundle.tar.gz` và truyền lên VPS `/tmp/`.
+2. Đồng bộ mã nguồn backend API `server/routes/tour.js` với đầy đủ 13 endpoints điều hành giải đấu.
+3. Khởi chạy và kiểm tra container `nocotour-dsc-app` qua Docker Compose trên VPS `217.15.160.118`.
+4. Kiểm tra trực tiếp `curl -sI https://nocotour.dsc.edu.vn/main/` -> `HTTP/1.1 200 OK`.
+5. Kiểm tra trực tiếp các file assets bundle: `tour-pairings-*.js` và `tour-standings-*.js` đều phản hồi `HTTP/1.1 200 OK`.
 
-### Giai đoạn 6: Cam kết & Bàn giao
-1. Commit toàn bộ mã nguồn sạch lên nhánh `main` và push lên GitHub `covuaduongsinh/nocotour`.
-2. Lưu bản sao kế hoạch tại `D:\code\nocotour\docs\plans\2026-11-04-ke-hoach-trien-khai-nocotour.md`.
+### Giai đoạn 6: Cam kết & Bàn giao [ĐÃ HOÀN THÀNH]
+1. Đã kiểm thử trọn vẹn vòng đời điều hành giải đấu trực tiếp qua API:
+   - Ghi nhận kết quả ván đấu tức thời (`1-0`, `0-1`, `1/2`).
+   - Tự động cập nhật bảng xếp hạng với hệ số phụ Buchholz Cut 1, Buchholz Total, Sonneborn-Berger.
+   - Bốc thăm Thụy Sĩ vòng 2 tự động ghép cặp theo điểm số và đổi màu quân đúng chuẩn FIDE Dutch.
+   - Thử nghiệm rollback hủy vòng 2 thành công an toàn.
+2. Commit toàn bộ mã nguồn sạch lên nhánh `main` và push lên GitHub `covuaduongsinh/nocotour`.
 3. Bàn giao kết quả kiểm thử hoàn chỉnh cho người dùng.
 
 ---

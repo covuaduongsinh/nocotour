@@ -47,5 +47,6 @@ database/*/collections/
 /research_notes/
 
 nocoedu_*.tar.gz
+extracted_modules/
 
 *.tar.gz
