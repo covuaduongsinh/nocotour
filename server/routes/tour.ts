@@ -203,7 +203,7 @@ export function createTourRoutes(db: any) {
       }
       const games = await gamesQuery.orderBy('boardNumber', 'asc').execute();
       const players = await q.selectFrom('tourPlayers').selectAll().where('divisionId', '=', divisionId).execute();
-      const playerMap = new Map(players.map((p: any) => [p.id, p]));
+      const playerMap = new Map<string, any>(players.map((p: any) => [p.id, p]));
 
       const enrichedGames = games.map((g: any) => {
         const white = playerMap.get(g.whitePlayerId);
@@ -283,7 +283,7 @@ export function createTourRoutes(db: any) {
 
       const currentRound = division.currentRound || 1;
       const calculatedStandings = standings(standPlayers, standGames);
-      const playerMap = new Map(players.map((p: any) => [p.id, p]));
+      const playerMap = new Map<string, any>(players.map((p: any) => [p.id, p]));
 
       const enrichedStandings = calculatedStandings.map((s: any) => {
         const p = playerMap.get(s.id);
